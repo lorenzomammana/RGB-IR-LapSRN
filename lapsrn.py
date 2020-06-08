@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 import math
+from guided_filter import GuidedFilter2d
 
 
 def get_upsample_filter(size):
@@ -55,14 +56,21 @@ class LapSrnMS(nn.Module):
         super(LapSrnMS, self).__init__()
 
         self.scale = scale
-        self.conv_input = nn.Conv2d(in_channels=1, out_channels=64, kernel_size=3, stride=1, padding=1, bias=True, )
+        self.conv_input = nn.Conv2d(in_channels=3, out_channels=64, kernel_size=3, stride=1, padding=1, bias=True, )
 
-        self.transpose = nn.ConvTranspose2d(in_channels=64, out_channels=64, kernel_size=3,
-                                            stride=2, padding=0, bias=True)
+        self.transpose = nn.PixelShuffle(2)
+
+        self.conv_t_1 = nn.Conv2d(in_channels=16, out_channels=32, kernel_size=3, stride=1, padding=1, bias=True, )
+        self.relu_t_1 = nn.LeakyReLU(0.2)
+        self.conv_t_2 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, stride=1, padding=1, bias=True, )
+        self.relu_t_2 = nn.LeakyReLU(0.2)
+
         self.relu_features = nn.LeakyReLU(0.2, inplace=True)
 
+        self.guided_filter = GuidedFilter2d(3, 1e-3)
+
         self.scale_img = nn.ConvTranspose2d(in_channels=1, out_channels=1, kernel_size=4,
-                                            stride=2, padding=0, bias=False)
+                                            stride=2, padding=1, bias=False)
 
         self.predict = nn.Conv2d(in_channels=64, out_channels=1, kernel_size=3, stride=1, padding=1, bias=True)
         self.features = FeatureEmbedding(r, d)
@@ -95,19 +103,24 @@ class LapSrnMS(nn.Module):
                 if m.bias is not None:
                     m.bias.data.zero_()
 
-    def forward(self, x):
+    def forward(self, x, x_ir):
         features = self.conv_input(x)
         output_images = []
-        rescaled_img = x.clone()
+        rescaled_img = x_ir.clone()
 
         for i in range(int(math.log2(self.scale))):
             features = self.features(features)
             features = self.transpose(self.relu_features(features))
 
-            features = features[:, :, :-1, :-1]
-            rescaled_img = self.scale_img(rescaled_img)
-            rescaled_img = rescaled_img[:, :, 1:-1, 1:-1]
+            features = self.relu_t_1(self.conv_t_1(features))
+            features = self.relu_t_2(self.conv_t_2(features))
             predict = self.predict(features)
+
+            if i == 0:
+                rescaled_img = self.guided_filter(x_ir, x)
+
+            rescaled_img = self.scale_img(rescaled_img)
+
             out = torch.add(predict, rescaled_img)
 
             output_images.append(out)

@@ -48,32 +48,38 @@ if __name__ == '__main__':
 
             for image_name in image_list:
                 # print("Processing ", image_name)
-                im_gt_y = sio.loadmat(image_name)['im_gt_y']
-                im_b_y = sio.loadmat(image_name)['im_b_y']
-                im_l_y = sio.loadmat(image_name)['im_l_y']
+                mat = sio.loadmat(image_name)
+                im_gt_y = mat['im_gt_y']
+                im_b_y = mat['im_b_y']
+                im_l_y = mat['im_l_y']
+                im_rgb = mat['im_rgb']
 
                 im_gt_y = im_gt_y.astype(float)
                 im_b_y = im_b_y.astype(float)
                 im_l_y = im_l_y.astype(float)
+                im_rgb = im_rgb.astype(float)
 
                 psnr_bicubic = PSNR(im_gt_y, im_b_y, shave_border=scale)
                 avg_psnr_bicubic += psnr_bicubic
                 avg_ssim_bicubic += SSIM(im_gt_y, im_b_y, shave_border=scale)
 
                 im_input = im_l_y / 255.
+                im_rgb = im_rgb / 255.
 
                 im_input = Variable(torch.from_numpy(im_input).float()).view(1, -1, im_input.shape[0], im_input.shape[1])
+                im_rgb = Variable(torch.from_numpy(im_rgb).float()).reshape(1, -1, im_rgb.shape[0], im_rgb.shape[1])
 
                 if cuda:
                     im_input = im_input.to('cuda:2')
+                    im_rgb = im_rgb.to('cuda:2')
                 else:
                     model = model.cpu()
 
                 start_time = time.time()
                 if scale == 2:
-                    HR_4x, _ = model(im_input)
+                    HR_4x, _ = model(im_rgb, im_input)
                 if scale == 4:
-                    _, HR_4x = model(im_input)
+                    _, HR_4x = model(im_rgb, im_input)
                 elapsed_time = time.time() - start_time
                 avg_elapsed_time += elapsed_time
 

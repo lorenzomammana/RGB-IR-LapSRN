@@ -71,10 +71,6 @@ class SRdatasetRGB(Dataset):
 
         img_rgb = Image.open('dataset/{}/registered-rgb/{}'.format(self.settype, id))
 
-        # Da rimuovere!
-        if img_rgb.mode == 'L':
-            img_rgb = Image.merge("RGB", [img_rgb.getchannel(0), img_rgb.getchannel(0), img_rgb.getchannel(0)])
-
         if self.settype == 'train':
             resize_factor = random.uniform(0.5, 1)
 

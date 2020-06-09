@@ -44,6 +44,7 @@ class SRdatasetRGB(Dataset):
     def __init__(self, settype):
         """Initialization"""
         self.list_ids = [os.path.basename(x) for x in glob.glob('dataset/{}/registered-rgb/*.jpeg'.format(settype))]
+        self.true_len = len(self.list_ids)
         self.settype = settype
         self.patch_size = 128
         self.eps = 1e-3
@@ -59,18 +60,20 @@ class SRdatasetRGB(Dataset):
         """Generates one sample of data"""
         # Select sample
         if self.settype == 'train':
-            id = self.list_ids[int(8861 * index / self.__len__())]
+            id = self.list_ids[int(self.true_len * index / self.__len__())]
         else:
             id = self.list_ids[index]
 
-        id = id.split('/')[-1]
         # Load data and get label
         img_ir = Image.open('dataset/{}/ir/{}'.format(self.settype, id))
+        img_ir.convert('YCbCr')
         img_ir = img_ir.getchannel(0)
 
         img_rgb = Image.open('dataset/{}/registered-rgb/{}'.format(self.settype, id))
-        img_rgb = img_rgb.convert('YCbCr')
-        img_rgb = img_rgb.getchannel(0)
+
+        # Da rimuovere!
+        if img_rgb.mode == 'L':
+            img_rgb = Image.merge("RGB", [img_rgb.getchannel(0), img_rgb.getchannel(0), img_rgb.getchannel(0)])
 
         if self.settype == 'train':
             resize_factor = random.uniform(0.5, 1)

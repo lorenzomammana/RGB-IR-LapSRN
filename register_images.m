@@ -11,10 +11,10 @@
 
 % save("parameters.mat", "mp", "fp");
 
-myDirRGB = "C:/data/FLIR_ADAS_1_3/video/RGB/";
+myDirRGB = "C:\data\FLIR_ADAS_1_3\train\RGB_fixed_size";
 myFiles = dir(fullfile(myDirRGB, '*.jpg'));
 
-myDirIR = "C:/data/FLIR_ADAS_1_3/video/thermal_8_bit/";
+myDirIR = "C:/data/FLIR_ADAS_1_3/train/thermal_8_bit/";
 load("parameters.mat");
 
 t = fitgeotrans(mp, fp, 'projective');
@@ -25,9 +25,12 @@ for k = 1:length(myFiles)
  
  rgb = imread(rgbFullFileName);
  
- Rfixed = imref2d(size(ir));
- registered = imwarp(rgb, t, 'OutputView', Rfixed);
- 
- imwrite(registered, strcat("C:/data/FLIR_ADAS_1_3/video/registered_rgb/", ...
-                    strrep(rgbFileName, '.jpg', '.jpeg'))); 
+ if mean(mean(mean(rgb))) < 248 && mean(mean(mean(rgb))) > 12
+     Rfixed = imref2d(size(ir));
+     registered = imwarp(rgb, t, 'OutputView', Rfixed);
+
+     imwrite(registered, strcat("C:/data/FLIR_ADAS_1_3/train/registered_rgb/", ...
+                        strrep(rgbFileName, '.jpg', '.jpeg'))); 
+ end
+
 end

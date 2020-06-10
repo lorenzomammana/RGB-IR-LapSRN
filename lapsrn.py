@@ -2,6 +2,9 @@ import torch
 import torch.nn as nn
 import numpy as np
 import math
+
+from torchvision import transforms
+
 from guided_filter import GuidedFilter2d
 
 
@@ -56,7 +59,7 @@ class LapSrnMS(nn.Module):
         super(LapSrnMS, self).__init__()
 
         self.scale = scale
-        self.conv_input = nn.Conv2d(in_channels=3, out_channels=64, kernel_size=3, stride=1, padding=1, bias=True, )
+        self.conv_input = nn.Conv2d(in_channels=1, out_channels=64, kernel_size=3, stride=1, padding=1, bias=True, )
 
         self.transpose = nn.PixelShuffle(2)
 
@@ -107,6 +110,11 @@ class LapSrnMS(nn.Module):
         features = self.conv_input(x)
         output_images = []
         rescaled_img = x_ir.clone()
+        # save_x = transforms.ToPILImage()(x[0].cpu())
+        # save_x.save("x_rgb.png", "PNG")
+
+        # save_x = transforms.ToPILImage()(x_ir[0].cpu())
+        # save_x.save("x_ir.png", "PNG")
 
         for i in range(int(math.log2(self.scale))):
             features = self.features(features)
@@ -116,10 +124,26 @@ class LapSrnMS(nn.Module):
             features = self.relu_t_2(self.conv_t_2(features))
             predict = self.predict(features)
 
+            # save_predict = predict[0].cpu()
+
+            # save_predict[save_predict < 0] = 0
+            # save_predict[save_predict > 1] = 1
+
+            # save_predict = # save_predict * 255
+            # save_predict = transforms.ToPILImage()(save_predict)
+
+            # save_predict.save("save_predict_{}x.png".format((i + 1) * 2), "PNG")
+
             if i == 0:
+                # TODO Verificare il risultato del guided_filter
+                # Ho paura che smussi troppo!
                 rescaled_img = self.guided_filter(x_ir, x)
 
             rescaled_img = self.scale_img(rescaled_img)
+
+            # save_rescaled = transforms.ToPILImage()(rescaled_img[0].cpu())
+
+            # save_rescaled.save("save_rescaled_{}x.png".format((i + 1) * 2), "PNG")
 
             out = torch.add(predict, rescaled_img)
 

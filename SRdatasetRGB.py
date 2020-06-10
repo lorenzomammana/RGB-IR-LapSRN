@@ -66,10 +66,12 @@ class SRdatasetRGB(Dataset):
 
         # Load data and get label
         img_ir = Image.open('dataset/{}/ir/{}'.format(self.settype, id))
-        img_ir.convert('YCbCr')
+        img_ir = img_ir.convert('YCbCr')
         img_ir = img_ir.getchannel(0)
 
         img_rgb = Image.open('dataset/{}/registered-rgb/{}'.format(self.settype, id))
+        img_rgb = img_rgb.convert('YCbCr')
+        img_rgb = img_rgb.getchannel(0)
 
         if self.settype == 'train':
             resize_factor = random.uniform(0.5, 1)
